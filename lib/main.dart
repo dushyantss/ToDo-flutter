@@ -8,6 +8,7 @@ void main() {
 
 const _appTitle = 'ToDo';
 final _accentColor = Colors.blueGrey[700];
+final _primaryColor = Colors.orange[100];
 
 class MyApp extends StatelessWidget {
   @override
@@ -15,9 +16,10 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: _appTitle,
       theme: ThemeData(
-        primaryColor: Colors.orange[100],
+        primaryColor: _primaryColor,
         accentColor: _accentColor,
         iconTheme: IconThemeData.fallback().copyWith(color: _accentColor),
+        cardColor: _primaryColor,
       ),
       home: MyHomePage(title: _appTitle),
     );
@@ -63,14 +65,14 @@ class _MyHomePageState extends State<MyHomePage> {
       appBar: AppBar(
         title: Text(widget.title),
       ),
-      body: Padding(
-        padding: EdgeInsets.all(16.0),
-        child: Column(
-          children: <Widget>[
-            Input(
-              onSubmit: _onSubmit,
-            ),
-            Expanded(
+      body: Column(
+        children: <Widget>[
+          Input(
+            onSubmit: _onSubmit,
+          ),
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0),
               child: ListView.builder(
                 itemCount: _todos.length,
                 itemBuilder: (context, i) => ListItem(
@@ -80,8 +82,8 @@ class _MyHomePageState extends State<MyHomePage> {
                     ),
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -95,21 +97,24 @@ class Input extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: <Widget>[
-        Expanded(
-            child: TextField(
-          controller: controller,
-          onSubmitted: onSubmit,
-        )),
-        IconButton(
-          onPressed: () => onSubmit(controller.text),
-          icon: Icon(
-            Icons.add,
-            size: 32.0,
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(24.0, 16.0, 16.0, 16.0),
+      child: Row(
+        children: <Widget>[
+          Expanded(
+              child: TextField(
+            controller: controller,
+            onSubmitted: onSubmit,
+          )),
+          IconButton(
+            onPressed: () => onSubmit(controller.text),
+            icon: Icon(
+              Icons.add,
+              size: 32.0,
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
@@ -138,11 +143,13 @@ class ListItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ListTile(
-      title: Text(todo.text),
-      trailing: IconButton(
-        onPressed: () => handleRemove(todo),
-        icon: Icon(Icons.delete),
+    return Dismissible(
+      key: key,
+      onDismissed: (_) => handleRemove(todo),
+      child: Card(
+        child: ListTile(
+          title: Text(todo.text),
+        ),
       ),
     );
   }
