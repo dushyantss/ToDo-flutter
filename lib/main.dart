@@ -40,10 +40,19 @@ class _MyHomePageState extends State<MyHomePage> {
     _todos.add(Todo(text));
   }
 
+  void _removeTodo(Todo todo) {
+    _todos.remove(todo);
+  }
+
+  void _onPressRemove(Todo todo) {
+    setState(() => _removeTodo(todo));
+  }
+
   void _onSubmit(String text) {
-    if (text.trim().length > 0) {
+    final validText = text.trim();
+    if (validText.length > 0) {
       setState(() {
-        _addTodo(text);
+        _addTodo(validText);
       });
     }
   }
@@ -64,12 +73,11 @@ class _MyHomePageState extends State<MyHomePage> {
             Expanded(
               child: ListView.builder(
                 itemCount: _todos.length,
-                itemBuilder: (context, i) {
-                  return ListTile(
-                    key: Key(_todos[i].id),
-                    title: Text(_todos[i].text),
-                  );
-                },
+                itemBuilder: (context, i) => ListItem(
+                      key: Key(_todos[i].id),
+                      todo: _todos[i],
+                      handleRemove: _onPressRemove,
+                    ),
               ),
             ),
           ],
@@ -80,7 +88,7 @@ class _MyHomePageState extends State<MyHomePage> {
 }
 
 class Input extends StatelessWidget {
-  Input({Key key, @required this.onSubmit});
+  Input({Key key, @required this.onSubmit}) : super(key: key);
 
   final ValueChanged<String> onSubmit;
   final TextEditingController controller = TextEditingController();
@@ -92,10 +100,10 @@ class Input extends StatelessWidget {
         Expanded(
             child: TextField(
           controller: controller,
-          onSubmitted: this.onSubmit,
+          onSubmitted: onSubmit,
         )),
         IconButton(
-          onPressed: () => this.onSubmit(controller.text),
+          onPressed: () => onSubmit(controller.text),
           icon: Icon(
             Icons.add,
             size: 32.0,
@@ -119,4 +127,23 @@ class Todo {
   }
 
   Todo._withId(this.id, this.text);
+}
+
+class ListItem extends StatelessWidget {
+  const ListItem({Key key, @required this.todo, @required this.handleRemove})
+      : super(key: key);
+
+  final Todo todo;
+  final ValueChanged<Todo> handleRemove;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListTile(
+      title: Text(todo.text),
+      trailing: IconButton(
+        onPressed: () => handleRemove(todo),
+        icon: Icon(Icons.delete),
+      ),
+    );
+  }
 }
