@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:uuid/uuid.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:local_auth/local_auth.dart';
 
 void main() => runApp(MyApp());
 
@@ -18,6 +19,7 @@ class MyApp extends StatelessWidget {
         accentColor: _accentColor,
         iconTheme: IconThemeData.fallback().copyWith(color: _accentColor),
         cardColor: _primaryColor,
+        buttonColor: _primaryColor,
       ),
       home: MyHomePage(title: _appTitle),
     );
@@ -33,16 +35,35 @@ class MyHomePage extends StatefulWidget {
   _MyHomePageState createState() => _MyHomePageState();
 }
 
-class _MyHomePageState extends State<MyHomePage> {
+class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
   final _todos = <Todo>[];
   final _listKey = GlobalKey<AnimatedListState>();
   SharedPreferences _prefs;
   var _error;
+  bool _authorized = false;
+  bool _firstCheckForAuthorization = true;
 
   @override
   initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _setPrefs();
+  }
+
+  @override
+  dispose() {
+    super.dispose();
+    WidgetsBinding.instance.removeObserver(this);
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused) {
+      setState(() {
+        _firstCheckForAuthorization = true;
+        _authorized = false;
+      });
+    }
   }
 
   _setPrefs() async {
@@ -51,7 +72,7 @@ class _MyHomePageState extends State<MyHomePage> {
       var storedTodos =
           _prefs.getKeys().map((id) => Todo.withId(id, _prefs.getString(id)));
       for (var i = 0; i < storedTodos.length; i++) {
-        _listKey.currentState.insertItem(i);
+        _listKey.currentState?.insertItem(i);
       }
       setState(() {
         _todos.addAll(storedTodos);
@@ -63,7 +84,7 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   void _addTodo(String text) {
-    _listKey.currentState.insertItem(_todos.length);
+    _listKey.currentState?.insertItem(_todos.length);
     var todo = Todo(text);
     _todos.add(todo);
     _prefs.setString(todo.id, todo.text);
@@ -73,7 +94,7 @@ class _MyHomePageState extends State<MyHomePage> {
     final index = _todos.indexOf(todo);
     _todos.removeAt(index);
     _prefs.remove(todo.id);
-    _listKey.currentState.removeItem(index, (context, animation) {
+    _listKey.currentState?.removeItem(index, (context, animation) {
       return Padding(
         padding: EdgeInsets.all(0.0),
       );
@@ -93,6 +114,61 @@ class _MyHomePageState extends State<MyHomePage> {
     }
   }
 
+  Widget _buildAuthorized() {
+    return _error != null
+        ? ErrorWidget(_error)
+        : Column(
+            children: <Widget>[
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16.0, 16.0, 16.0, 0.0),
+                  child: MyAnimatedList(
+                    listKey: _listKey,
+                    todos: _todos,
+                    handleRemove: _onPressRemove,
+                  ),
+                ),
+              ),
+              Input(
+                onSubmit: _onSubmit,
+              ),
+            ],
+          );
+  }
+
+  _authenticate() async {
+    final LocalAuthentication auth = new LocalAuthentication();
+    bool authenticated = false;
+    try {
+      authenticated = await auth.authenticateWithBiometrics(
+        localizedReason: 'Scan your fingerprint to authenticate',
+        useErrorDialogs: true,
+        stickyAuth: true,
+      );
+    } catch (e) {
+      debugPrint(e);
+    }
+    if (!mounted) return;
+
+    setState(() {
+      _authorized = authenticated;
+    });
+  }
+
+  Widget _buildAuthorize() {
+    if (_firstCheckForAuthorization) {
+      _firstCheckForAuthorization = false;
+      _authenticate();
+    }
+    return Center(
+      child: RaisedButton.icon(
+        label: Text('Authorize to access'),
+        icon: Icon(Icons.security),
+        onPressed: _authenticate,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -100,25 +176,7 @@ class _MyHomePageState extends State<MyHomePage> {
         title: Text(widget.title),
         centerTitle: true,
       ),
-      body: _error != null
-          ? ErrorWidget(_error)
-          : Column(
-              children: <Widget>[
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(16.0, 16.0, 16.0, 0.0),
-                    child: MyAnimatedList(
-                      listKey: _listKey,
-                      todos: _todos,
-                      handleRemove: _onPressRemove,
-                    ),
-                  ),
-                ),
-                Input(
-                  onSubmit: _onSubmit,
-                ),
-              ],
-            ),
+      body: _authorized ? _buildAuthorized() : _buildAuthorize(),
     );
   }
 }

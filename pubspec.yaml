@@ -4,6 +4,7 @@ description: A Simple TODO list app built in flutter
 dependencies:
   uuid: 1.0.0
   shared_preferences: ^0.4.2
+  local_auth: ^0.2.1
   flutter:
     sdk: flutter
 
