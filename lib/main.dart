@@ -37,13 +37,21 @@ class MyHomePage extends StatefulWidget {
 
 class _MyHomePageState extends State<MyHomePage> {
   final _todos = <Todo>[];
+  final _listKey = GlobalKey<AnimatedListState>();
 
   void _addTodo(String text) {
+    _listKey.currentState.insertItem(_todos.length);
     _todos.add(Todo(text));
   }
 
   void _removeTodo(Todo todo) {
-    _todos.remove(todo);
+    final index = _todos.indexOf(todo);
+    _todos.removeAt(index);
+    _listKey.currentState.removeItem(index, (context, animation) {
+      return Padding(
+        padding: EdgeInsets.all(0.0),
+      );
+    });
   }
 
   void _onPressRemove(Todo todo) {
@@ -73,18 +81,47 @@ class _MyHomePageState extends State<MyHomePage> {
           Expanded(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16.0),
-              child: ListView.builder(
-                itemCount: _todos.length,
-                itemBuilder: (context, i) => ListItem(
-                      key: Key(_todos[i].id),
-                      todo: _todos[i],
-                      handleRemove: _onPressRemove,
-                    ),
+              child: MyAnimatedList(
+                listKey: _listKey,
+                todos: _todos,
+                handleRemove: _onPressRemove,
               ),
             ),
           ),
         ],
       ),
+    );
+  }
+}
+
+class MyAnimatedList extends StatelessWidget {
+  const MyAnimatedList(
+      {Key key,
+      @required this.listKey,
+      @required this.todos,
+      @required this.handleRemove})
+      : super(key: key);
+
+  final List<Todo> todos;
+  final GlobalKey<AnimatedListState> listKey;
+  final ValueChanged<Todo> handleRemove;
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedList(
+      key: listKey,
+      initialItemCount: todos.length,
+      itemBuilder: (context, i, animation) {
+        return ListItem(
+          key: Key(todos[i].id),
+          todo: todos[i],
+          handleRemove: handleRemove,
+          animation: Tween(
+            begin: Offset(-1.0, 0.0),
+            end: Offset.zero,
+          ).animate(animation),
+        );
+      },
     );
   }
 }
@@ -135,20 +172,28 @@ class Todo {
 }
 
 class ListItem extends StatelessWidget {
-  const ListItem({Key key, @required this.todo, @required this.handleRemove})
+  const ListItem(
+      {Key key,
+      @required this.todo,
+      this.handleRemove,
+      @required this.animation})
       : super(key: key);
 
   final Todo todo;
   final ValueChanged<Todo> handleRemove;
+  final Animation<Offset> animation;
 
   @override
   Widget build(BuildContext context) {
-    return Dismissible(
-      key: key,
-      onDismissed: (_) => handleRemove(todo),
-      child: Card(
-        child: ListTile(
-          title: Text(todo.text),
+    return SlideTransition(
+      position: animation,
+      child: Dismissible(
+        key: key,
+        onDismissed: handleRemove != null ? (_) => handleRemove(todo) : null,
+        child: Card(
+          child: ListTile(
+            title: Text(todo.text),
+          ),
         ),
       ),
     );
