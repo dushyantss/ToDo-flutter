@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:uuid/uuid.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() => runApp(MyApp());
 
@@ -35,15 +36,43 @@ class MyHomePage extends StatefulWidget {
 class _MyHomePageState extends State<MyHomePage> {
   final _todos = <Todo>[];
   final _listKey = GlobalKey<AnimatedListState>();
+  SharedPreferences _prefs;
+  var _error;
+
+  @override
+  initState() {
+    super.initState();
+    _setPrefs();
+  }
+
+  _setPrefs() async {
+    try {
+      _prefs = await SharedPreferences.getInstance();
+      var storedTodos =
+          _prefs.getKeys().map((id) => Todo.withId(id, _prefs.getString(id)));
+      for (var i = 0; i < storedTodos.length; i++) {
+        _listKey.currentState.insertItem(i);
+      }
+      setState(() {
+        _todos.addAll(storedTodos);
+      });
+    } catch (e) {
+      debugPrint(e.toString());
+      setState(() => _error = e);
+    }
+  }
 
   void _addTodo(String text) {
     _listKey.currentState.insertItem(_todos.length);
-    _todos.add(Todo(text));
+    var todo = Todo(text);
+    _todos.add(todo);
+    _prefs.setString(todo.id, todo.text);
   }
 
   void _removeTodo(Todo todo) {
     final index = _todos.indexOf(todo);
     _todos.removeAt(index);
+    _prefs.remove(todo.id);
     _listKey.currentState.removeItem(index, (context, animation) {
       return Padding(
         padding: EdgeInsets.all(0.0),
@@ -70,23 +99,25 @@ class _MyHomePageState extends State<MyHomePage> {
       appBar: AppBar(
         title: Text(widget.title),
       ),
-      body: Column(
-        children: <Widget>[
-          Input(
-            onSubmit: _onSubmit,
-          ),
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0),
-              child: MyAnimatedList(
-                listKey: _listKey,
-                todos: _todos,
-                handleRemove: _onPressRemove,
-              ),
+      body: _error != null
+          ? ErrorWidget(_error)
+          : Column(
+              children: <Widget>[
+                Input(
+                  onSubmit: _onSubmit,
+                ),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                    child: MyAnimatedList(
+                      listKey: _listKey,
+                      todos: _todos,
+                      handleRemove: _onPressRemove,
+                    ),
+                  ),
+                ),
+              ],
             ),
-          ),
-        ],
-      ),
     );
   }
 }
@@ -141,7 +172,9 @@ class Input extends StatelessWidget {
             onSubmitted: onSubmit,
           )),
           IconButton(
-            onPressed: () => onSubmit(controller.text),
+            onPressed: () {
+              onSubmit(controller.text);
+            },
             icon: Icon(
               Icons.add,
               size: 32.0,
@@ -159,12 +192,9 @@ class Todo {
   final String text;
   final String id;
 
-  factory Todo(String text) {
-    final todo = Todo._withId(uuid.v4(), text);
-    return todo;
-  }
+  Todo(this.text) : id = uuid.v4();
 
-  Todo._withId(this.id, this.text);
+  Todo.withId(this.id, this.text);
 }
 
 class ListItem extends StatelessWidget {
