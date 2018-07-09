@@ -98,23 +98,24 @@ class _MyHomePageState extends State<MyHomePage> {
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.title),
+        centerTitle: true,
       ),
       body: _error != null
           ? ErrorWidget(_error)
           : Column(
               children: <Widget>[
-                Input(
-                  onSubmit: _onSubmit,
-                ),
                 Expanded(
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                    padding: const EdgeInsets.fromLTRB(16.0, 16.0, 16.0, 0.0),
                     child: MyAnimatedList(
                       listKey: _listKey,
                       todos: _todos,
                       handleRemove: _onPressRemove,
                     ),
                   ),
+                ),
+                Input(
+                  onSubmit: _onSubmit,
                 ),
               ],
             ),
@@ -163,7 +164,7 @@ class Input extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(24.0, 16.0, 16.0, 16.0),
+      padding: const EdgeInsets.fromLTRB(24.0, 0.0, 16.0, 16.0),
       child: Row(
         children: <Widget>[
           Expanded(
