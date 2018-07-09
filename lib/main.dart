@@ -1,10 +1,7 @@
 import 'package:flutter/material.dart';
-// import 'package:flutter/rendering.dart';
+import 'package:uuid/uuid.dart';
 
-void main() {
-  // debugPaintSizeEnabled = true;
-  runApp(MyApp());
-}
+void main() => runApp(MyApp());
 
 const _appTitle = 'ToDo';
 final _accentColor = Colors.blueGrey[700];
@@ -157,14 +154,13 @@ class Input extends StatelessWidget {
 }
 
 class Todo {
-  static int _nextId = 0;
+  static Uuid uuid = Uuid();
 
   final String text;
   final String id;
 
   factory Todo(String text) {
-    final todo = Todo._withId(_nextId.toString(), text);
-    _nextId += 1;
+    final todo = Todo._withId(uuid.v4(), text);
     return todo;
   }
 
